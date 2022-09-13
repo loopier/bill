@@ -5,12 +5,15 @@ file=${@: -1}
 function usage {
     echo "Usage: $(basename $0) [OPTIONS] ... FILE -- accounting and invoice manager.
 
-where:
+options:
     -h  show this help
 
     -a                      show all entries in the registry
     -f  KEY1=REGEX1[:key2=regex2:...:keyN=regexN]   filter registry with KEY=REGEX pairs
     -i  PROJECT_FILENAME    generate invoice
+    -j  CLIENT:PROJECT      generate job entry
+    -n  NUM                 get info of invoice
+    -o  ARG                 generate invoice and export to pdf
 "
 }
 
@@ -19,12 +22,23 @@ function all () {
 }
 
 function filter () {
-    echo "file: $file"
-    echo "filter: $1"
+    # echo "file: $file"
+    # echo "filter: $1"
     ./bill-all $file | ./bill-filter -v filters="$1"
 }
 
-while getopts ':a:f:hi:' arg; do
+function newJob () {
+    echo "TODO: make a new job $1"
+    readarray -d : -t clientproj <<< $1
+    ./bill-new-job ${clientproj[0]} ${clientproj[1]}
+}
+
+function outputToPdf () {
+    echo "TODO: generate invoice and export to PDF"
+    echo "output file: $1"
+}
+
+while getopts ':a:f:hi:j:n:o:' arg; do
     case ${arg} in
         a)
             # echo "filter with ${OPTARG}"
@@ -33,12 +47,21 @@ while getopts ':a:f:hi:' arg; do
         i)
             echo "generate invoice ${OPTARG}"
             ;;
+        j)
+            newJob ${OPTARG}
+            ;;
         f)
             echo "filter with ${OPTARG}"
             filter ${OPTARG}
             ;;
         h)
             usage
+            ;;
+        n)
+            filter "num=${OPTARG}"
+            ;;
+        o)
+            outputToPdf ${OPTARG}
             ;;
         :)
             echo "$0: Must supply an argument to -$OPTARG."
@@ -48,9 +71,10 @@ while getopts ':a:f:hi:' arg; do
             echo "Invalid option: -${OPTARG}."
             exit 2
             ;;
-        *)
-            echo "Please supply an option"
-            ;;
+        # *)
+        #     echo "Please supply an option"
+        #     exit 2
+        #     ;;
     esac
 done
 

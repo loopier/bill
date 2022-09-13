@@ -13,7 +13,7 @@ BEGIN {
     FS = "|"
     # OFS= "|"
 
-    printf("filters: ", filters)
+    printf("filters: %s\n", filters)
 
     split(filters, splitfilters, ":")
 

@@ -1,0 +1,89 @@
+#!/usr/bin/sh
+
+function usage {
+   echo "Usage: $(basename $0) [OPTIONS] CLIENT:PROJECT -- create a project
+
+options:
+    -h  show this help
+
+    -c  FILE   file containing the clients registry
+    -p  FILE   file containing the projects and accounting registry
+"
+}
+
+while getopts ':c:p:' arg; do
+   case ${arg} in
+      c)
+         echo "clients file ${OPTARG}"
+         ;;
+      p)
+         echo "project file ${OPTARG}"
+         ;;
+      h)
+         usage
+         ;;
+      :)
+         echo "$0: Must supply an argument to -$OPTARG."
+         exit 1
+         ;;
+      ?)
+         echo "Invalid option: -${OPTARG}."
+         exit 2
+         ;;
+   esac
+done
+
+# DATE=$(date +%d/%m/%Y)
+DIRDATE=$(date +%Y%m%d)
+readarray -d : -t CLIENTPROJ <<< ${@: -1}
+CLIENT=${CLIENTPROJ[0]}
+PROJECT=$(echo ${CLIENTPROJ[1]} | xargs) # trim whitespace with xargs
+PROJECTS_FILE=$3
+DEFAULT_CLIENTS_DB_FILE=clients.dat
+
+if [ -z $(grep -w $CLIENT $DEFAULT_CLIENTS_DB_FILE) ]; then
+   echo "Client $CLIENT not found."
+   # list all starting with the same first 3 characters
+   awk -F : '/alias/ {print $2}' $DEFAULT_CLIENTS_DB_FILE | grep "^\s${CLIENT:0:3}"
+   # with fuzzy finder
+   # awk -F : '/alias/ {print $2}' $DEFAULT_CLIENTS_DB_FILE | fzf -f $CLIENT
+
+   exit 2
+fi
+
+if [ -z $POJECT_DIR ]; then
+    PROJECT_DIR=~/work
+fi
+
+PROJECT_UPPERCASE=$(echo $PROJECT | tr '[:lower:]' '[:upper:]')
+
+DEFAULT_STATUS="todo"
+DEFAULT_ITEM="Storyboard frames $PROJECT_UPPERCASE"
+DEFAULT_PU=35.00
+DEFAULT_QUANT=1
+DEFAULT_IVA=21
+DEFAULT_IRPF=15
+
+echo "status: "$DEFAULT_STATUS
+echo "num: "$NUM
+echo "date: "$DATE
+echo "project: "$PROJECT
+echo "client: "$CLIENT
+echo "item: $DEFAULT_ITEM : $DEFAULT_QUANT @ $DEFAULT_PU"
+echo "base: "$BASE
+echo "iva: "$DEFAULT_IVA
+echo "irpf: "$DEFAULT_IRPF
+echo "ivaamt: "$IVAAMT
+echo "irpfamt: "$IRPFAMT
+echo "total: "$TOTAL
+echo "roi: "$ROI
+
+PROJECT_DIR_NAME=$PROJECT_DIR/$CLIENT-$DIRDATE-$PROJECT
+
+echo ""
+echo "creating project in: "$PROJECT_DIR_NAME/docs
+
+# mkdir -p $PROJECT_DIR/$PROJECT_DIR_NAME
+
+# echo "alias-: $CLIENT"
+# grep $CLIENT $DEFAULT_CLIENTS_DB_FILE
