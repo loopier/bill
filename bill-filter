@@ -1,0 +1,120 @@
+#!/usr/bin/awk -f
+
+# a simple script to do basic accounting
+# this script filters the input in table format given by bill-all
+# 
+# a possible command
+# ./bill-dev -v filters="num=regex:year=regex:..."
+
+# WARNING: developed using 'gawk'.
+#          it might not work in compatibility mode
+
+BEGIN {
+    FS = "|"
+    # OFS= "|"
+
+    printf("filters: ", filters)
+
+    split(filters, splitfilters, ":")
+
+    for( i in splitfilters )
+        setFilterVars(splitfilters[i])
+
+    printf("UPDATED: "); system("date +%d-%m-%Y%l:%M%P")
+
+    formatstr = "%-8s|%-8s|%-8s|%-20.20s|%-20.20s|%-20.20s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s\n"
+    printf(foramtstr, "status", "num" , "project", "client", "item", "base", "iva", "ivaamt", "irpf", "irpfamt", "total", "roi")
+}
+
+/^UPDATED:/ {next}
+
+function setFilterVars( varstr ) {
+    split(varstr, keyvalue, "=")
+    # print "keyval", keyvalue[1], keyvalue[2]
+
+    switch( keyvalue[1] ) {
+    case "status": statusfilter = keyvalue[2]; break;
+    case "num": numfilter = keyvalue[2]; break;
+    case "date":
+        date = keyvalue[2]
+        split(date, splitdate, "/")
+        day = splitdate[1]
+        month = splitdate[2]
+        year = splitdate[3]
+        ; break;
+    case "year": yearfilter = keyvalue[2]; break;
+    case "month": monthfilter = keyvalue[2]; break;
+    case "day": dayfilter = keyvalue[2]; break;
+    case "project": projectfilter = keyvalue[2]; break;
+    case "client": clientfilter = keyvalue[2]; break;
+    case "item": itemfilter = keyvalue[2]; break;
+    case "base": basefilter = keyvalue[2]; break;
+    case "iva": ivafilter = keyvalue[2] / 100; break;
+    case "irpf": irpffilter = keyvalue[2] / 100; break;
+    case "ivaamt": ivaamtfilter = keyvalue[2];
+    case "irpfamt": irpfamtfilter = keyvalue[2];
+    case "total": totalfilter = keyvalue[2]; break;
+    case "roi": roifilter = keyvalue[2]; break;
+    default: "-"; break;
+    }
+    # print("vars: ", printvars())
+}
+
+function add() {
+    status = $1
+    num = $2
+    date = $3
+    split(date, splitdate, "/")
+    day = splitdate[1]
+    month = splitdate[2]
+    year = splitdate[3]
+    project = $4
+    client = $5
+    item = $6
+    base = $7
+    iva = $8
+    ivaamt = $9
+    irpf = $10
+    irpfamt = $11
+    total = $12
+    roi = $13
+
+    totalbase += base
+    totaliva += ivaamt
+    totalirpf += irpfamt
+    totaltotal += total
+    entries += 1
+
+    # printVars()
+    # print $0
+    formatstr = "%-8s|%-8s|%-11s|%-20.20s|%-20.20s|%-20.20s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s\n"
+    printf(formatstr, status, num, date, project, client, item, base, iva, ivaamt, irpf, irpfamt, total, roi)
+    # printf("%-8s|%-8s|%-20.20s|%-20.20s|%-20.20s|%.2f|%.2f|%.2f|%.2f|%.2f|%.2f|%-8s\n", status, num , project, client, item, base, iva, ivaamt, irpf, irpfamt, total, roi)
+    # printf("%-8s %-8s %-20.20s %-20.20s %-4.2f %2.2f %7.7s %7.7s %7.7s %7.7s %7.7s\n", status, num , project, client, base, iva, ivaamt, irpf, irpfamt, total, roi)
+}
+
+function printVars() {
+    print "status:", status
+    print "num:", num
+    print "date:", date
+    print "project:", project
+    print "client:", client
+    print "item:", item
+    print "base:", base
+    print "iva:", iva
+    print "irpf:", irpf
+    print "ivaamt:", ivaamt
+    print "irpfamt:", irpfamt
+    print "total:", total
+    print "roi:", roi
+}
+
+$0 ~ statusfilter && $0 ~ numfilter && $0 ~ datefilter && $0 ~ yearfilter && $0 ~ monthfilter && $0 ~ clientfilter && $0 ~ projectfilter && $0 ~ ivafilter && $0 ~ irpffilter && $0 ~ roifilter { add() }
+
+END {
+    print ""
+    formatstr = "%8.8s|%8.8s|%8.8s|%8.8s\n"
+    printf(formatstr, "base", "iva", "irfp", "total")
+    printf(formatstr, sprintf("%'.2f",totalbase), sprintf("%'.2f",totaliva), sprintf("%'.2f",totalirpf), sprintf("%'.2f",totaltotal) )
+    print "entries:", entries
+}

@@ -1,0 +1,173 @@
+#!/usr/bin/awk -f
+
+# a simple script to do basic accounting
+# 
+# a possible command call would be piped to column
+# ./bill-dev -v key=year -v value=2020 comptabilitat.dat | column -t -s "|" -R 6,7,8,9,10,11
+
+# WARNING: developed using 'gawk'.
+#          it might not work in compatibility mode
+
+BEGIN {
+    RS = "\n\n\n"
+    FS = "\n"
+    printf("status|num |project|client|item|base|iva|ivaamt|irpf|irpfamt|total|roi\n")
+    # printf("UPDATED: "); system("date +%d-%m-%Y%l:%M%P")
+
+    # print("filters: ", filters)
+
+    # split(filters, splitfilters, ":")
+
+    # for( i in splitfilters )
+    #     setvars(splitfilters[i])
+
+}
+
+# /^UPDATED:/ {next}
+# /^filters:/ {next}
+# /^vars: / {next}
+
+# function setvars( varstr ) {
+#     split(varstr, keyvalue, "=")
+#     print "keyval", keyvalue[1], keyvalue[2]
+
+#     switch( keyvalue[1] ) {
+#     case "status": status = keyvalue[2]; break;
+#     case "num": num = keyvalue[2]; break;
+#     case "date":
+#         date = keyvalue[2]
+#         split(date, splitdate, "/")
+#         day = splitdate[1]
+#         month = splitdate[2]
+#         year = splitdate[3]
+#         ; break;
+#     case "year": year = keyvalue[2]; break;
+#     case "month": month = keyvalue[2]; break;
+#     case "day": day = keyvalue[2]; break;
+#     case "project": project = keyvalue[2]; break;
+#     case "client": client = keyvalue[2]; break;
+#     case "item": item = keyvalue[2]; break;
+#     case "base": base = keyvalue[2]; break;
+#     case "iva": iva = keyvalue[2] / 100; break;
+#     case "irpf": irpf = keyvalue[2] / 100; break;
+#         # case "ivaamt": ivaamt = keyvalue[2];
+#         # case "irpfamt": irpfamt = keyvalue[2];
+#         # case "total": total = keyvalue[2]; break;
+#         # case "roi": roi = keyvalue[2]; break;
+#     default: "-"; break;
+#     }
+#     # print("vars: ", printvars())
+# }
+
+# function addregistry() {
+{
+    for( i = 0; i < NF; i++ ) {
+        split($i, arr, ":");
+
+        switch( arr[1] ) {
+            case "status": status = arr[2]; break;
+            case "num": num = arr[2]; break;
+            case "date":
+                date = arr[2]
+                split(date, splitdate, "/")
+                day = splitdate[1]
+                month = splitdate[2]
+                year = splitdate[3]
+                ; break;
+            case "project": project = arr[2]; break;
+            case "client": client = arr[2]; break;
+            case "item": item = arr[2]; break;
+            case "base": base = arr[2]; break;
+            case "iva": iva = arr[2] / 100; break;
+            case "irpf": irpf = arr[2] / 100; break;
+            # case "ivaamt": ivaamt = arr[2];
+            # case "irpfamt": irpfamt = arr[2];
+            # case "total": total = arr[2]; break;
+            # case "roi": roi = arr[2]; break;
+            default: "-"; break;
+        }
+    }
+
+    ivaamt = base * iva
+    irpfamt = base * irpf
+    total = base + ivaamt - irpfamt
+    if( iva == 0 && irpf == 0 )
+        roi = "roi"
+    else
+        if( iva == 0 && irpf == 0.15 )
+            roi = "exempt"
+        else
+            roi = ""
+
+    output()
+    entries += 1
+}
+
+function printvars() {
+    print status
+    print num
+    print date
+    print project
+    print client
+    print item
+    print base
+    print sprintf("%.2f", iva)
+    print irpf
+    print ivaamt
+    print irpfamt
+    print total
+    print roi
+}
+
+function output() {
+    # formatstr = "%-8s|%-8s|%-8s|%-20.20s|%-20.20s|%-20.20s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s|%7.7s\n"
+    # printf(formatstr, status, num, date, project, client, item, base, iva, ivaamt, irpf, irpfamt, total, roi)
+    printf("%-8s|%-8s|%-11s|%-20.20s|%-20.20s|%-20.20s|%.2f|%.2f|%.2f|%.2f|%.2f|%.2f|%-8s\n", status, num, date, project, client, item, base, iva, ivaamt, irpf, irpfamt, total, roi)
+    # printf("%-8s %-8s %-20.20s %-20.20s %-4.2f %2.2f %7.7s %7.7s %7.7s %7.7s %7.7s\n", status, num , project, client, base, iva, ivaamt, irpf, irpfamt, total, roi)
+
+    totalbase += base
+    totaliva += ivaamt
+    totalirpf += irpfamt
+    totaltotal += total
+
+}
+
+function printtotals() {
+    # print ""
+    # formatstr = "%8.8s|%8.8s|%8.8s|%8.8s\n"
+    # formatstr = "%8.8s|%8.8s|%8.8s|%8.8s\n"
+    # printf(formatstr, "base", "iva", "irfp", "total")
+    # printf(formatstr, sprintf("%.2f",totalbase), sprintf("%.2f",totaliva), sprintf("%.2f",totalirpf), sprintf("%.2f",totaltotal) )
+}
+
+# field ~ /status/ { print status }
+# field ~ /num/ { print num }
+# field ~ /date/ { print date }
+# field ~ /project/ { print project }
+# field ~ /client/ { print client }
+# field ~ /item/ { print item }
+# field ~ /base/ { print base }
+# field ~ /iva/ { print iva }
+# field ~ /irpf/ { print irpf }
+# field ~ /ivaamt/ { print ivaamt }
+# field ~ /irpfamt/ { print irpfamt }
+# field ~ /total/ { print total }
+# field ~ /roi/ { print roi }
+
+# key ~ /status/ && value == status { output() }
+# key ~ /client/ && value == client { output() }
+# key ~ /project/ && value == project { output() }
+
+# key ~ /year/ && value == year { output() }
+# # key ~ /trim/ && value == (month % 3) { output() }
+# key ~ /iva/ && value == iva { output() }
+# key ~ /irpf/ && value == irpf { output() }
+# key ~ /roi/ && value == roi { output() }
+
+# $0 ~ num && $0 ~ year { addregistry() }
+# $0 ~ year { addregistry() }
+
+END {
+    printtotals()
+    # print "entries:", entries
+}

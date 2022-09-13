@@ -1,0 +1,56 @@
+#!/usr/bin/sh
+
+file=${@: -1}
+
+function usage {
+    echo "Usage: $(basename $0) [OPTIONS] ... FILE -- accounting and invoice manager.
+
+where:
+    -h  show this help
+
+    -a                      show all entries in the registry
+    -f  KEY1=REGEX1[:key2=regex2:...:keyN=regexN]   filter registry with KEY=REGEX pairs
+    -i  PROJECT_FILENAME    generate invoice
+"
+}
+
+function all () {
+    ./bill-all $1
+}
+
+function filter () {
+    echo "file: $file"
+    echo "filter: $1"
+    ./bill-all $file | ./bill-filter -v filters="$1"
+}
+
+while getopts ':a:f:hi:' arg; do
+    case ${arg} in
+        a)
+            # echo "filter with ${OPTARG}"
+            all ${OPTARG}
+            ;;
+        i)
+            echo "generate invoice ${OPTARG}"
+            ;;
+        f)
+            echo "filter with ${OPTARG}"
+            filter ${OPTARG}
+            ;;
+        h)
+            usage
+            ;;
+        :)
+            echo "$0: Must supply an argument to -$OPTARG."
+            exit 1
+            ;;
+        ?)
+            echo "Invalid option: -${OPTARG}."
+            exit 2
+            ;;
+        *)
+            echo "Please supply an option"
+            ;;
+    esac
+done
+
