@@ -30,6 +30,7 @@ function filter () {
 function newJob () {
     echo "TODO: make a new job $1"
     readarray -d : -t clientproj <<< $1
+    echo ${clientproj[0]} " -- " ${clientproj[1]}
     ./bill-new-job ${clientproj[0]} ${clientproj[1]}
 }
 

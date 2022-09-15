@@ -6,18 +6,26 @@ function usage {
 options:
     -h  show this help
 
+    -d  DIR    project directory
+
     -c  FILE   file containing the clients registry
     -p  FILE   file containing the projects and accounting registry
 "
 }
 
-while getopts ':c:p:' arg; do
+while getopts ':c:d:p:' arg; do
    case ${arg} in
       c)
-         echo "clients file ${OPTARG}"
+         echo "setting clients file: ${OPTARG}"
+         CLIENTS_DB_FILE=${OPTARG}
+         ;;
+      d)
+         echo "setting project directory: ${OPTARG}"
+         PROJECT_DIR=${OPTARG}
          ;;
       p)
-         echo "project file ${OPTARG}"
+         echo "setting project file: ${OPTARG}"
+         PROJECTS_FILE=${OPTARG}
          ;;
       h)
          usage
@@ -35,24 +43,35 @@ done
 
 # DATE=$(date +%d/%m/%Y)
 DIRDATE=$(date +%Y%m%d)
-readarray -d : -t CLIENTPROJ <<< ${@: -1}
-CLIENT=${CLIENTPROJ[0]}
-PROJECT=$(echo ${CLIENTPROJ[1]} | xargs) # trim whitespace with xargs
-PROJECTS_FILE=$3
-DEFAULT_CLIENTS_DB_FILE=clients.dat
+# readarray -d : -t CLIENTPROJ <<< ${@: -1}
+# CLIENT=${CLIENTPROJ[0]}
+# PROJECT=$(echo ${CLIENTPROJ[1]} | xargs) # trim whitespace with xargs
+CLIENT=$1
+PROJECT=$(echo $2 | xargs)
 
-if [ -z $(grep -w $CLIENT $DEFAULT_CLIENTS_DB_FILE) ]; then
-   echo "Client $CLIENT not found."
-   # list all starting with the same first 3 characters
-   awk -F : '/alias/ {print $2}' $DEFAULT_CLIENTS_DB_FILE | grep "^\s${CLIENT:0:3}"
-   # with fuzzy finder
-   # awk -F : '/alias/ {print $2}' $DEFAULT_CLIENTS_DB_FILE | fzf -f $CLIENT
-
-   exit 2
+if [ -z ${PROJECT_DIR} ]; then
+    PROJECT_DIR=work
+    echo "default project dir:" $PROJECT_DIR
 fi
 
-if [ -z $POJECT_DIR ]; then
-    PROJECT_DIR=~/work
+if [ -z ${CLIENTS_DB_FILE} ]; then
+   CLIENTS_DB_FILE=clients.dat
+   echo "default clients DB file:" $CLIENTS_DB_FILE
+fi
+
+if [ -z ${PROJECTS_DB_FILE} ]; then
+   PROJECTS_DB_FILE=comptabilitat.dat
+   echo "default projects DB file:" $PROJECTS_DB_FILE
+fi
+
+if [[ -z $(grep -w $CLIENT $CLIENTS_DB_FILE) ]]; then
+   echo "Client $CLIENT not found."
+   # list all starting with the same first 3 characters
+   awk -F : '/alias/ {print $2}' $CLIENTS_DB_FILE | grep "^\s${CLIENT:0:3}"
+   # with fuzzy finder
+   # awk -F : '/alias/ {print $2}' $CLIENTS_DB_FILE | fzf -f $CLIENT
+
+   exit 2
 fi
 
 PROJECT_UPPERCASE=$(echo $PROJECT | tr '[:lower:]' '[:upper:]')
@@ -64,26 +83,55 @@ DEFAULT_QUANT=1
 DEFAULT_IVA=21
 DEFAULT_IRPF=15
 
-echo "status: "$DEFAULT_STATUS
-echo "num: "$NUM
-echo "date: "$DATE
-echo "project: "$PROJECT
-echo "client: "$CLIENT
-echo "item: $DEFAULT_ITEM : $DEFAULT_QUANT @ $DEFAULT_PU"
-echo "base: "$BASE
-echo "iva: "$DEFAULT_IVA
-echo "irpf: "$DEFAULT_IRPF
-echo "ivaamt: "$IVAAMT
-echo "irpfamt: "$IRPFAMT
-echo "total: "$TOTAL
-echo "roi: "$ROI
+FILE=$CLIENT-$DIRDATE-$PROJECT.dat
+PROJECT_DIR_NAME=$HOME/$PROJECT_DIR/$CLIENT-$DIRDATE-$PROJECT
 
-PROJECT_DIR_NAME=$PROJECT_DIR/$CLIENT-$DIRDATE-$PROJECT
+echo  "client: $CLIENT"
+echo  "proj: $PROJECT"
+echo  "proj dir: $PROJECT_DIR"
+echo  "clients db file: $CLIENTS_DB_FILE)"
+grep -w $CLIENT $CLIENTS_DB_FILE
+echo  "projects db file: $PROJECTS_DB_FILE)"
+echo  "project dir name: $PROJECT_DIR_NAME)"
+echo  "file: $FILE)"
 
-echo ""
-echo "creating project in: "$PROJECT_DIR_NAME/docs
+# echo $ENTRY_STR > afile.dat; cat afile.cat; rm afile.cat
 
-# mkdir -p $PROJECT_DIR/$PROJECT_DIR_NAME
+# echo ""
+# echo "creating project in: "$PROJECT_DIR_NAME/docs
+
+# mkdir -p $PROJECT_DIR_NAME/docs
+# cd $PROJECT_DIR_NAME
+
+# printf "status: %s\nnum: %s\ndate: %s\nproject: %s\nclient: %s\nitem: %s @ %.2f\nbase: %s\niva: %s\nirpf: %s\nivaamt: %s\nirpfamt: %s\ntotal: %s\nroi: %s\n" $DEFAULT_STATUS $NUM $DATE $PROJECT $CLIENT $DEFAULT_ITEM $DEFAULT_QUANT $DEFAULT_PU $BASE $DEFAULT_IVA $DEFAULT_IRPF $IVAAMT $IRPFAMT $TOTAL $ROI
+# echo -e $ENTRY_STR # > afile.txt
+# cat afile.txt
 
 # echo "alias-: $CLIENT"
-# grep $CLIENT $DEFAULT_CLIENTS_DB_FILE
+# grep $CLIENT $CLIENTS_DB_FILE
+
+# ENTRY_STR="
+# status: $DEFAULT_STATUS\n
+# num: $NUM\n
+# date: $DATE\n
+# project: $PROJECT\n
+# client: $CLIENT\n
+# item: $DEFAULT_TIME : DEFAULT_QUANT @ $DEFAULT_PU\n
+# base: $BASE\n
+# iva: $DEFAULT_IVA\n
+# irpf: $DEFAULT_IRPF\n
+# ivaamt: $IVAAMT\n
+# irpfamt: $IRPFAMT\n
+# total: $TOTAL\n
+# roi: $ROY\n
+# "
+
+ENTRY_STR="\nstatus: $DEFAULT_STATUS\nnum: $NUM\ndate: $DATE\nproject: $PROJECT\nclient: $CLIENT\nitem: $DEFAULT_TIME : $DEFAULT_QUANT @ $DEFAULT_PU\nbase: $BASE\niva: $DEFAULT_IVA\nirpf: $DEFAULT_IRPF\nivaamt: $IVAAMT\nirpfamt: $IRPFAMT\ntotal: $TOTAL\nroi: $ROY\n"
+# echo -e $ENTRY_STR$(cat afile.dat) > afile.dat
+# sed -i '1s;^;alo;' afile.dat
+echo -e $ENTRY_STR > /tmp/tmp.dat
+
+cat $PROJECTS_DB_FILE >> /tmp/tmp.dat
+# cat atmp.dat
+cat /tmp/tmp.dat > $PROJECTS_DB_FILE
+rm /tmp/tmp.dat
