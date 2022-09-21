@@ -4,9 +4,11 @@ A command-line application to track job commissions and accounting
 
 ## Commands
 
-`bill new client` - add new client to the db (interactive)
+`bill client <CLIENT>` - get client info or add new client to the db if client doesn't exist (interactive)
 
-`bill new job <CLIENT> <PROJECT>` - start a new job. If `client` is not found, list possible matches.
+`bill job <CLIENT> <PROJECT>` - start a new job. If `client` is not found, list possible matches.
+
+`bill jobs` - list open (todo) jobs
 
 `bill invoice <JOB_DIR>` - create an invoice from a job and export it to pdf (`cd PROJECT_DIR` and run on `.` by default)
 
@@ -21,4 +23,6 @@ A command-line application to track job commissions and accounting
 `bill get <INVOICE_NUM|PROJECT_NAME|CLIENT>` 
 
 `bill edit <INVOICE_NUM|PROJECT_NAME|CLIENT>` - open registry file in editor and put cursor at the block that matches the given job
+
+`bill iva <TRIMESTER[1-4]> [YEAR]` - print a table with the accounting results for the given trimester.
 
