@@ -101,6 +101,7 @@ echo  "file: $FILE)"
 # echo "creating project in: "$PROJECT_DIR_NAME/docs
 
 # mkdir -p $PROJECT_DIR_NAME/docs
+# mkdir -p $PROJECT_DIR_NAME/$PROJECT-v01-kra
 # cd $PROJECT_DIR_NAME
 
 # printf "status: %s\nnum: %s\ndate: %s\nproject: %s\nclient: %s\nitem: %s @ %.2f\nbase: %s\niva: %s\nirpf: %s\nivaamt: %s\nirpfamt: %s\ntotal: %s\nroi: %s\n" $DEFAULT_STATUS $NUM $DATE $PROJECT $CLIENT $DEFAULT_ITEM $DEFAULT_QUANT $DEFAULT_PU $BASE $DEFAULT_IVA $DEFAULT_IRPF $IVAAMT $IRPFAMT $TOTAL $ROI
