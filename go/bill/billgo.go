@@ -7,7 +7,7 @@ import (
 	"strconv"
 	// "regexp"
 	"flag"
-	// "time"
+	"time"
 	"github.com/bitfield/script"
 	"github.com/spakin/awk"
 )
@@ -234,8 +234,6 @@ func filter( regex string, input string ) string {
 	totaltotal := 0.0
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) {
-		// aw.SetRS("\n\n")
-		// aw.SetFS("\n")
 		aw.SetFS("|")
 	}
 	// aw.AppendStmt(nil, func(s *awk.Script) {
@@ -277,8 +275,24 @@ func filter( regex string, input string ) string {
 	return output
 }
 
-func tax( trimester string ) {
-	fmt.Printf("filter: %s\n", trimester)
+/// \breif	filter by trimester
+func tax( trimester string, year string ) string {
+	var output string
+	fmt.Printf("filter by trimester: %s %s\n", trimester, year)
+	tri := strings.TrimSpace(trimester)
+	if t, err := strconv.ParseInt(tri, 10, 0); err == nil {
+		fmt.Printf("trimester: %d\n", t)
+		var dec int
+		if dec = 0; (t % 4 == 0) {
+			dec = 1
+		}
+
+		re := fmt.Sprintf("date=%d[%d%d%d]/%s", dec, (((t-1)*3) + 1) % 10, (((t-1)*3) + 2) % 10, (((t-1)*3) + 3) % 10, year)
+
+		fmt.Printf("trimester: %d : regex: %s\n", t, re)
+		output = filter( re, registry() )
+	}
+	return output
 }
 
 func main() {
@@ -306,7 +320,12 @@ func main() {
 	case "status": status( flag.Arg(1) )
 	case "filter": fmt.Printf("%s%s", registryHeaderString, filter( flag.Arg(1), registry()) )
 	case "registry": fmt.Printf("%s%s", registryHeaderString, registry())
-	case "tax": tax( flag.Arg(1) )
+	case "tax":
+		year := flag.Arg(2)
+		if len(year) < 2 {
+			year = fmt.Sprintf("%d", time.Now().Year())
+		}
+		fmt.Printf("%s%s", registryHeaderString, tax( flag.Arg(1), year ))
 	}
 
 }
