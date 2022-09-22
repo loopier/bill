@@ -240,6 +240,10 @@ func filter( regex string ) string {
 	fmt.Printf("value: %s\n", value)
 	fmt.Println("")
 
+	totalivaamt := 0.0
+	totalirpfamt := 0.0
+	totalbase := 0.0
+	totaltotal := 0.0
 	str := ""
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) {
@@ -259,8 +263,19 @@ func filter( regex string ) string {
 		func(aw *awk.Script) bool 	{ return aw.F(col).Match(value) },
 		func(aw *awk.Script) 		{
 			// fmt.Printf("col: %d - key: %s - val: %s\n", col, key, value)
+			totalivaamt += aw.F(getColIndex("ivaamt", cols) + 1).Float64()
+			totalirpfamt += aw.F(getColIndex("irpfamt", cols) + 1).Float64()
+			totalbase += aw.F(getColIndex("base", cols) + 1).Float64()
+			totaltotal += aw.F(getColIndex("total", cols) + 1).Float64()
 			str += fmt.Sprintln(aw.F(0).String())
 		})
+
+	aw.End = func(s *awk.Script) {
+		str += fmt.Sprintf("total iva: %.2f\n", totalivaamt)
+		str += fmt.Sprintf("total irpf: %.2f\n", totalirpfamt)
+		str += fmt.Sprintf("total base: %.2f\n", totalbase)
+		str += fmt.Sprintf("absolute total: %.2f\n", totaltotal)
+	}
 
 	// convert registry string to Reader in order to use
 	// it as awk input
