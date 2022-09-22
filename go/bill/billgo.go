@@ -15,6 +15,8 @@ import (
 var billPath string;
 var registryFilename string;
 var clientsFilename string;
+var registryFormatString string = "%-8.8s|%-9.9s|%-11.11s|%-14.14s|%-14.14s|%5s|%5s|%8s|%7s|%7s|%8s|%-3.3s\n"
+var registryHeaderString string = fmt.Sprintf(registryFormatString, "status", "num", "date", "client", "project", "iva", "irpf", "base", "ivaamt", "irpfamt", "total", "roi")
 
 type Item struct {
 	description string
@@ -55,19 +57,23 @@ func status( status string ) {
 	fmt.Printf("status: %s\n", status)
 }
 
-func getBase ( items []Item ) float64 {
-	/// TODO: change 'itmes' for Item[] class
-	return 100.00
+func getItemSubtotal( item Item ) float32 {
+	return item.quant * item.unitPrice
+}
+
+func getBase ( items []Item ) float32 {
+	var base float32 = 0.0;
+	for _, item := range items {
+		base += getItemSubtotal(item)
+	}
+	return base
 }
 
 func asItem ( str string ) Item {
 	var item Item
-	fmt.Println(str)
 	str = strings.Replace(str, "@", ":", -1)
-	fmt.Println(str)
 	tokens := strings.Split(str, ":")
 	item.description = tokens[1]
-	fmt.Printf("quant:%s, pu:%s\n", tokens[2], tokens[3])
 
 	quant := strings.TrimSpace(tokens[2])
 	if q, err := strconv.ParseFloat(quant, 32); err == nil {
@@ -89,78 +95,89 @@ func printSlice( x []Item ) {
 }
 
 func printItem( item Item ) {
-	fmt.Printf("item: %s quant: %d p/u: %.2f iva: %.2f\n", item.description, item.quant, item.unitPrice, item.iva)
+	fmt.Printf("item: %-20s quant: %6.2f p/u: %6.2f iva: %6.2f\n", item.description, item.quant, item.unitPrice, item.iva)
 }
+
+func getColIndex( str string, strArray []string ) int {
+	for i, s := range strArray {
+		str = strings.TrimSpace(str)
+		s = strings.TrimSpace(s)
+		// fmt.Printf("%d: %-8s %-8s %b\n", i, str, s, (str == s))
+		if str == s {
+			return i
+		}
+	}
+
+	return -1
+}
+
 
 /// \brief	convert a registry entry to a row
 func entryAsColumns( entry string ) string {
 	// awk input to one row with columns
 	// fmt.Println(entry)
-	var str string;
-	var status string;
-	var num string;
-	var date string;
-	var client string;
-	var project string;
-	// var items []Item;
-	// var itemstr string;
-	var iva float64;
-	var irpf float64;
-	var base float64;
-	var ivaamt float64;
-	var irpfamt float64;
-	var total float64;
-	var roi string;
+	var str string
+	var status string
+	var num string
+	var date string
+	var client string
+	var project string
+	var items []Item
+	// var itemstr string
+	var iva float64
+	var irpf float64
+	var base float64
+	var ivaamt float64
+	var irpfamt float64
+	var total float64
+	var roi string
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) { aw.SetFS(":") }
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("status")},
-		func(aw *awk.Script) 		{ status = aw.F(2).String()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("status") },
+		func(aw *awk.Script) 		{ status = aw.F(2).String() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("num")},
-		func(aw *awk.Script) 		{ num = aw.F(2).String()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("num") },
+		func(aw *awk.Script) 		{ num = aw.F(2).String() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("date")},
-		func(aw *awk.Script) 		{ date = aw.F(2).String()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("date") },
+		func(aw *awk.Script) 		{ date = aw.F(2).String() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("client")},
-		func(aw *awk.Script) 		{ client = aw.F(2).String()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("client") },
+		func(aw *awk.Script) 		{ client = aw.F(2).String() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("project")},
-		func(aw *awk.Script) 		{ project = aw.F(2).String()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("project") },
+		func(aw *awk.Script) 		{ project = aw.F(2).String() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("iva")},
-		func(aw *awk.Script) 		{ iva = aw.F(2).Float64()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("iva") },
+		func(aw *awk.Script) 		{ iva = aw.F(2).Float64() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("irpf")},
-		func(aw *awk.Script) 		{ irpf = aw.F(2).Float64()})
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("irpf") },
+		func(aw *awk.Script) 		{ irpf = aw.F(2).Float64() })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(1).Match("item")},
+		func(aw *awk.Script) bool 	{ return aw.F(1).Match("item") },
 		func(aw *awk.Script) 		{
 			item := asItem(aw.F(0).String())
-			// asItem(aw.F(0).String())
-			printItem(item)
-			// itemstr += fmt.Sprintf("%s\n", aw.F(0).String())
+			items = append(items, item)
+			base = float64(getBase(items))
 		})
 
-	// printSlice(items)
+	// fmt.Println(entry)
 
-	// base = getBase( "item1" )
-	ivaamt = base * iva / 100
-	irpfamt = base * irpf / 100
-	total = base + ivaamt - irpfamt
-	if( iva == 0.0 && irpf > 0.0 ) {
-		roi = "exempt"
-	} else if ( iva == 0.0 && irpf == 0.0 ) {
-		roi = "roi"
-	} else {
-		roi = "-"
-	}
 
 	aw.End = func(aw *awk.Script) {
-		registryFormatString := "%-8.8s|%-9.9s|%-11.11s|%-14.14s|%-14.14s|%8.2f|%6.2f|%6.2f|%6.2f|%6.2f|%8.2f|%-3.3s\n"
+		ivaamt = base * iva / 100
+		irpfamt = base * irpf / 100
+		total = base + ivaamt - irpfamt
+		if( iva == 0.0 && irpf > 0.0 ) {
+			roi = "exempt"
+		} else if ( iva == 0.0 && irpf == 0.0 ) {
+			roi = "roi"
+		} else {
+			roi = "-"
+		}
+		registryFormatString := "%-8.8s|%-9.9s|%-11.11s|%-14.14s|%-14.14s|%5.2f|%5.2f|%8.2f|%7.2f|%7.2f|%8.2f|%-3.3s\n"
 		str = fmt.Sprintf(registryFormatString, status, num, date, client, project, iva, irpf, base, ivaamt, irpfamt, total, roi)
-		// str = itemstr
 	}
 
 	areader := strings.NewReader(entry)
@@ -176,30 +193,17 @@ func entryAsColumns( entry string ) string {
 
 
 func registry() string {
-	fmt.Printf("print registry: %s\n", "")
+	// fmt.Printf("print registry: %s\n", "")
 	str := ""
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) {
 		aw.SetRS("\n\n")
 		aw.SetFS("\n")
 		// aw.SetOFS(" ")
-		registryFormatString := "%-8.8s|%-9.9s|%-11.11s|%-14.14s|%-14.14s|%8s|%6s|%6s|%6s|%6s|%8s|%-3.3s\n"
-		str = fmt.Sprintf(registryFormatString, "status", "num", "date", "client", "project", "iva", "irpf", "base", "ivaamt", "irpfamt", "total", "roi")
+		// registryFormatString := "%-8.8s|%-9.9s|%-11.11s|%-14.14s|%-14.14s|%5s|%5s|%8s|%7s|%7s|%8s|%-3.3s\n"
+		// str = fmt.Sprintf(registryFormatString, "status", "num", "date", "client", "project", "iva", "irpf", "base", "ivaamt", "irpfamt", "total", "roi")
 	}
 	aw.AppendStmt(nil, func(aw *awk.Script) {
-		// status := strings.Split(aw.F(2).String(), ":")[1]
-		// num := strings.Split(aw.F(3).String(), ":")[1]
-		// date := strings.Split(aw.F(4).String(), ":")[1]
-		// client := strings.Split(aw.F(6).String(), ":")[1]
-		// project := strings.Split(aw.F(5).String(), ":")[1]
-		// // TODO: change 'base' for cacluation on items quant * unit price
-		// base := strings.Split(aw.F(12).String(), ":")[1]
-		// iva := strings.Split(aw.F(14).String(), ":")[1]
-		// irpf := strings.Split(aw.F(16).String(), ":")[1]
-
-		// str += fmt.Sprintf("%-8s|%-8s|%-8s|%-8s|%-8s|\n", status, num, date, client, project)
-		// str += fmt.Sprintf("%-8s|%-8s|%-11s|%-20s|%-20s|%.2f|%.2f|%.2f\n", status, num, date, client, project, base, iva, irpf)
-
 		str += entryAsColumns(aw.F(0).String())
 	})
 	aw.Run(script.Exec("cat " + billPath + "/" + registryFilename))
@@ -207,24 +211,63 @@ func registry() string {
 	return str
 }
 
-func filter( regex string ) {
-	fmt.Printf("filter: %s\n", regex)
-	// re := regexp.MustCompile(regex)
-	// registry().MatchRegexp(re).Stdout()
-	// registry().Stdout()
+func filter( regex string ) string {
+	cols := strings.Split(registryHeaderString, "|")
+
+	keyValue := strings.Split(regex, "=")
+
+	fmt.Println("")
+	if len(keyValue) != 2 {
+		for i, c := range cols {
+			cols[i] = strings.TrimSpace(c)
+		}
+		fmt.Printf("invalid filter: %s\n", regex)
+		fmt.Println("usage: bill filter <COLUMN>=<REGEX>[:<COLUMN>=<REGEX>:...]")
+		fmt.Printf("COLUMN: %s\n", strings.Join(cols, " | "))
+		// os.Exit(0)
+
+		fmt.Println("")
+		return "\n-- BAD RESULT --\n"
+	}
+
+	key := keyValue[0]
+	value := keyValue[1]
+	col := getColIndex(key, cols) + 1
+
+	fmt.Printf("filter regex: %s\n", regex)
+	fmt.Printf("filter columns: %d\n", len(cols))
+	fmt.Printf("key: %s : %d\n", key, col)
+	fmt.Printf("value: %s\n", value)
+	fmt.Println("")
+
+	str := ""
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) {
-		aw.SetRS("\n\n")
-		aw.SetFS("\n")
+		// aw.SetRS("\n\n")
+		// aw.SetFS("\n")
+		aw.SetFS("|")
 	}
-	aw.AppendStmt(nil, func(s *awk.Script) {
-		fmt.Printf("%s\n", aw.F(0))
-	})
+	// aw.AppendStmt(nil, func(s *awk.Script) {
+	// 	fmt.Printf("col: %d\n", col)
+	// 	fmt.Printf("regex: %s\n", regex)
+	// 	fmt.Printf("key: %s\n", key)
+	// 	fmt.Printf("awk: %s\n", aw.F(col))
+	// 	// fmt.Printf("match: %s\n", aw.F(col + 2).match(regex))
+	// 	fmt.Println()
+	// })
+	aw.AppendStmt(
+		func(aw *awk.Script) bool 	{ return aw.F(col).Match(value) },
+		func(aw *awk.Script) 		{
+			// fmt.Printf("col: %d - key: %s - val: %s\n", col, key, value)
+			str += fmt.Sprintln(aw.F(0).String())
+		})
 
 	// convert registry string to Reader in order to use
 	// it as awk input
 	registry := strings.NewReader(registry())
 	aw.Run(registry)
+
+	return str
 }
 
 func tax( trimester string ) {
@@ -253,7 +296,7 @@ func main() {
 	cmd := flag.Arg(0)
 	fmt.Printf("cmd: %s\n", cmd)
 	fmt.Printf("path: %s\n", billPath)
-	fmt.Printf("filename: %s\n", registryFilename)
+	fmt.Printf("registry: %s\n", registryFilename)
 	fmt.Printf("clients: %s\n", clientsFilename)
 	// t := time.Now()
 	// fmt.Printf("date: %4d%02d%02d\n", t.Year(), t.Month(), t.Day())
@@ -264,8 +307,8 @@ func main() {
 	case "invoice": invoice( flag.Arg(1) )
 	case "pdf": exportToPdf( flag.Arg(1) )
 	case "status": status( flag.Arg(1) )
-	case "filter": filter( flag.Arg(1) )
-	case "registry": fmt.Println(registry())
+	case "filter": fmt.Printf("%s%s", registryHeaderString, filter( flag.Arg(1)) )
+	case "registry": fmt.Printf("%s%s", registryHeaderString, registry())
 	case "tax": tax( flag.Arg(1) )
 	}
 
