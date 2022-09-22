@@ -211,7 +211,32 @@ func registry() string {
 	return str
 }
 
-func filter( regex string ) string {
+/// \brief	filter input table
+///
+///	Filter the input table with the given criteria.
+///	 Criteria can be searched in one or many columns.
+///
+/// Examples:
+///	 - Show all the entries in the first trimester of 2022:
+///	 `bill filter date=0[123]/2022`
+///	 - To look for all the entries in the first trimester of 2022 from one client:
+///	 `bill filter date=0[123]/2022:client=foolanito`
+///
+/// \param	regex	String	Criteria to match: <COLUMN>=<REGEX>[:<COLUMN>=<CRITERIA>]
+/// \param	input	String	A table to be filtered
+/// \returns		String	All the input rows containing the given criteria and
+/// 						the sum of their tax amounts and grand totals.
+func filter( regex string, input string ) string {
+	output := ""
+	if strings.Contains(regex, ":") {
+		res := strings.Split(regex, ":")
+		for _, re := range res {
+			input = filter(re, input)
+			fmt.Println("bla")
+		}
+		return input
+	}
+
 	cols := strings.Split(registryHeaderString, "|")
 
 	keyValue := strings.Split(regex, "=")
@@ -244,7 +269,6 @@ func filter( regex string ) string {
 	totalirpfamt := 0.0
 	totalbase := 0.0
 	totaltotal := 0.0
-	str := ""
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) {
 		// aw.SetRS("\n\n")
@@ -267,22 +291,22 @@ func filter( regex string ) string {
 			totalirpfamt += aw.F(getColIndex("irpfamt", cols) + 1).Float64()
 			totalbase += aw.F(getColIndex("base", cols) + 1).Float64()
 			totaltotal += aw.F(getColIndex("total", cols) + 1).Float64()
-			str += fmt.Sprintln(aw.F(0).String())
+			output += fmt.Sprintln(aw.F(0).String())
 		})
 
 	aw.End = func(s *awk.Script) {
-		str += fmt.Sprintf("total iva: %.2f\n", totalivaamt)
-		str += fmt.Sprintf("total irpf: %.2f\n", totalirpfamt)
-		str += fmt.Sprintf("total base: %.2f\n", totalbase)
-		str += fmt.Sprintf("absolute total: %.2f\n", totaltotal)
+		output += fmt.Sprintf("total iva: %.2f\n", totalivaamt)
+		output += fmt.Sprintf("total irpf: %.2f\n", totalirpfamt)
+		output += fmt.Sprintf("total base: %.2f\n", totalbase)
+		output += fmt.Sprintf("absolute total: %.2f\n", totaltotal)
 	}
 
-	// convert registry string to Reader in order to use
+	// convert result string to Reader in order to use
 	// it as awk input
-	registry := strings.NewReader(registry())
+	registry := strings.NewReader(input)
 	aw.Run(registry)
 
-	return str
+	return output
 }
 
 func tax( trimester string ) {
@@ -322,7 +346,7 @@ func main() {
 	case "invoice": invoice( flag.Arg(1) )
 	case "pdf": exportToPdf( flag.Arg(1) )
 	case "status": status( flag.Arg(1) )
-	case "filter": fmt.Printf("%s%s", registryHeaderString, filter( flag.Arg(1)) )
+	case "filter": fmt.Printf("%s%s", registryHeaderString, filter( flag.Arg(1), registry()) )
 	case "registry": fmt.Printf("%s%s", registryHeaderString, registry())
 	case "tax": tax( flag.Arg(1) )
 	}
