@@ -112,10 +112,8 @@ func getColIndex( str string, strArray []string ) int {
 }
 
 
-/// \brief	convert a registry entry to a row
+/// \brief	convert a registry entry to a '|'-separated row
 func entryAsColumns( entry string ) string {
-	// awk input to one row with columns
-	// fmt.Println(entry)
 	var str string
 	var status string
 	var num string
@@ -123,7 +121,6 @@ func entryAsColumns( entry string ) string {
 	var client string
 	var project string
 	var items []Item
-	// var itemstr string
 	var iva float64
 	var irpf float64
 	var base float64
@@ -164,7 +161,6 @@ func entryAsColumns( entry string ) string {
 
 	// fmt.Println(entry)
 
-
 	aw.End = func(aw *awk.Script) {
 		ivaamt = base * iva / 100
 		irpfamt = base * irpf / 100
@@ -185,23 +181,13 @@ func entryAsColumns( entry string ) string {
 	return str
 }
 
-/// \brief	return the contents of registry file
-// func registry() *script.Pipe {
-// 	fmt.Printf("print registry: %s\n", "")
-// 	return script.Exec( "cat " + billPath + "/" + registryFilename )
-// }
-
-
+///	\brief	return the full registry as a '|'-separated table
 func registry() string {
-	// fmt.Printf("print registry: %s\n", "")
 	str := ""
 	aw := awk.NewScript()
 	aw.Begin = func(s *awk.Script) {
 		aw.SetRS("\n\n")
 		aw.SetFS("\n")
-		// aw.SetOFS(" ")
-		// registryFormatString := "%-8.8s|%-9.9s|%-11.11s|%-14.14s|%-14.14s|%5s|%5s|%8s|%7s|%7s|%8s|%-3.3s\n"
-		// str = fmt.Sprintf(registryFormatString, "status", "num", "date", "client", "project", "iva", "irpf", "base", "ivaamt", "irpfamt", "total", "roi")
 	}
 	aw.AppendStmt(nil, func(aw *awk.Script) {
 		str += entryAsColumns(aw.F(0).String())
@@ -209,6 +195,16 @@ func registry() string {
 	aw.Run(script.Exec("cat " + billPath + "/" + registryFilename))
 
 	return str
+}
+
+/// \param	keyOrValue	Int		0 = key; 1 = value
+func getRegexKeysOrValues( regex string, keyOrValue int ) []string {
+	var result []string
+	res := strings.Split(regex, ":")
+	for _, re := range res {
+		result = append(result, strings.Split(re, "=")[keyOrValue])
+	}
+	return result
 }
 
 /// \brief	filter input table
@@ -228,42 +224,9 @@ func registry() string {
 /// 						the sum of their tax amounts and grand totals.
 func filter( regex string, input string ) string {
 	output := ""
-	if strings.Contains(regex, ":") {
-		res := strings.Split(regex, ":")
-		for _, re := range res {
-			input = filter(re, input)
-			fmt.Println("bla")
-		}
-		return input
-	}
-
+	keys := getRegexKeysOrValues(regex, 0);
+	values := getRegexKeysOrValues(regex, 1);
 	cols := strings.Split(registryHeaderString, "|")
-
-	keyValue := strings.Split(regex, "=")
-
-	fmt.Println("")
-	if len(keyValue) != 2 {
-		for i, c := range cols {
-			cols[i] = strings.TrimSpace(c)
-		}
-		fmt.Printf("invalid filter: %s\n", regex)
-		fmt.Println("usage: bill filter <COLUMN>=<REGEX>[:<COLUMN>=<REGEX>:...]")
-		fmt.Printf("COLUMN: %s\n", strings.Join(cols, " | "))
-		// os.Exit(0)
-
-		fmt.Println("")
-		return "\n-- BAD RESULT --\n"
-	}
-
-	key := keyValue[0]
-	value := keyValue[1]
-	col := getColIndex(key, cols) + 1
-
-	fmt.Printf("filter regex: %s\n", regex)
-	fmt.Printf("filter columns: %d\n", len(cols))
-	fmt.Printf("key: %s : %d\n", key, col)
-	fmt.Printf("value: %s\n", value)
-	fmt.Println("")
 
 	totalivaamt := 0.0
 	totalirpfamt := 0.0
@@ -276,16 +239,21 @@ func filter( regex string, input string ) string {
 		aw.SetFS("|")
 	}
 	// aw.AppendStmt(nil, func(s *awk.Script) {
-	// 	fmt.Printf("col: %d\n", col)
-	// 	fmt.Printf("regex: %s\n", regex)
-	// 	fmt.Printf("key: %s\n", key)
-	// 	fmt.Printf("awk: %s\n", aw.F(col))
-	// 	// fmt.Printf("match: %s\n", aw.F(col + 2).match(regex))
-	// 	fmt.Println()
+	// 	fmt.Printf("%d: %s: %s : %s : %s\n", col, key, value, aw.F(col).String(), aw.F(col).Match(value))
 	// })
 	aw.AppendStmt(
-		func(aw *awk.Script) bool 	{ return aw.F(col).Match(value) },
-		func(aw *awk.Script) 		{
+		func(aw *awk.Script) bool {
+			for i, k := range keys {
+				c := getColIndex(k, cols) + 1
+				match := aw.F(c).Match(values[i])
+				if match == false {
+					return false
+				}
+			}
+
+			return true
+		},
+		func(aw *awk.Script) {
 			// fmt.Printf("col: %d - key: %s - val: %s\n", col, key, value)
 			totalivaamt += aw.F(getColIndex("ivaamt", cols) + 1).Float64()
 			totalirpfamt += aw.F(getColIndex("irpfamt", cols) + 1).Float64()
@@ -314,16 +282,6 @@ func tax( trimester string ) {
 }
 
 func main() {
-	// script.Args().Join().Stdout()
-	// script.Stdin().Stdout()
-	// fmt.Println("alo")
-	// script.FindFiles("../../../*.*").Stdout()
-
-	// bla := "3"
-	// f, err := strconv.ParseFloat(bla, 32)
-	// fmt.Printf("%s (%T) %.2f (%T)", bla, bla, f, f)
-	// os.Exit(0)
-
 	homedir, err := os.UserHomeDir()
 	if err != nil { return }
 
